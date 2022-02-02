@@ -1,20 +1,19 @@
 //
 //  RCTThemis.m
-//  ThemisExample
 //
 //  Created by Oleksii Radetskyi on 04.11.2021.
 //
 
 #import <Foundation/Foundation.h>
 #import <React/RCTLog.h>
-#import "Themis.h"
+#import "RCTThemis.h"
 
 @import themis;
 
-@implementation Themis
+@implementation RCTThemis
 
 // To export a module named RCTThemis
-RCT_EXPORT_MODULE(Themis);
+RCT_EXPORT_MODULE(RCTThemis);
 
 // To save the comparators objects
 NSMutableDictionary* cmprs;
@@ -96,7 +95,7 @@ RCT_EXPORT_METHOD(stringSerialize:(NSString*) text
                   )
 {
   NSData* data = [text dataUsingEncoding:NSUTF8StringEncoding];
-    NSArray *data2 = [Themis dataSerialize: data];
+    NSArray *data2 = [RCTThemis dataSerialize: data];
   callback(@[data2]);
 }
 
@@ -114,8 +113,8 @@ RCT_EXPORT_METHOD(keyPair:(nonnull NSNumber*) algorithm
       break;
   }
 
-    NSArray  *privateKey = [Themis dataSerialize: keypair.privateKey];
-    NSArray   *publicKey = [Themis dataSerialize: keypair.publicKey];
+    NSArray  *privateKey = [RCTThemis dataSerialize: keypair.privateKey];
+    NSArray   *publicKey = [RCTThemis dataSerialize: keypair.publicKey];
   
   NSDictionary *dictionary = @{
        @"private" : privateKey,
@@ -128,15 +127,15 @@ RCT_EXPORT_METHOD(keyPair:(nonnull NSNumber*) algorithm
 RCT_EXPORT_METHOD(symmetricKey:(RCTResponseSenderBlock)callback)
 {
   NSData *symmetricKey = TSGenerateSymmetricKey();
-    NSArray *masterKey = [Themis dataSerialize: symmetricKey];
+    NSArray *masterKey = [RCTThemis dataSerialize: symmetricKey];
   callback(@[masterKey]);
 }
 
 - (TSCellSeal *)newSealMode: (NSArray*) symmetricKey
 {
   @try {
-      NSData *masterKey = [Themis dataDeserialize: symmetricKey];
-    TSCellSeal *cell = [[TSCellSeal alloc] initWithKey:masterKey];
+    NSData *masterKey = [RCTThemis dataDeserialize: symmetricKey];
+    TSCellSeal *cell  = [[TSCellSeal alloc] initWithKey:masterKey];
     return cell;
   }
   @catch (NSException *e) {
@@ -169,7 +168,7 @@ RCT_EXPORT_METHOD(secureSealWithSymmetricKeyEncrypt:(NSArray*) symmetricKey
   NSData *txt  = [plaintext dataUsingEncoding:NSUTF8StringEncoding];
   NSData *ctx  = [context dataUsingEncoding:NSUTF8StringEncoding];
   NSData *encrypted = [cell encrypt:txt context:ctx];
-    NSArray *result = [Themis dataSerialize:encrypted];
+  NSArray *result = [RCTThemis dataSerialize:encrypted];
   successCallback(@[result]);
 }
 
@@ -186,7 +185,7 @@ RCT_EXPORT_METHOD(secureSealWithSymmetricKeyDecrypt:(NSArray*) symmetricKey
   
   @try {
     cell = [self newSealMode:symmetricKey];
-      enc  = [Themis dataDeserialize:encrypted];
+    enc  = [RCTThemis dataDeserialize:encrypted];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -203,7 +202,7 @@ RCT_EXPORT_METHOD(secureSealWithSymmetricKeyDecrypt:(NSArray*) symmetricKey
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:decrypted];
+    NSArray* result = [RCTThemis dataSerialize:decrypted];
     successCallback(@[result]);
   }
   
@@ -229,7 +228,7 @@ RCT_EXPORT_METHOD(secureSealWithPassphraseEncrypt:(NSString*) passphrase
   NSData *ctx  = [context dataUsingEncoding:NSUTF8StringEncoding];
   NSData *encrypted = [cell encrypt:txt context:ctx];
   
-    NSArray *result = [Themis dataSerialize:encrypted];
+  NSArray *result = [RCTThemis dataSerialize:encrypted];
 
   callback(@[result]);
 }
@@ -246,7 +245,7 @@ RCT_EXPORT_METHOD(secureSealWithPassphraseDecrypt:(NSString*) passphrase
   NSData *enc;
   
   @try {
-      enc  = [Themis dataDeserialize:encrypted];
+    enc  = [RCTThemis dataDeserialize:encrypted];
   } @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
     errorCallback(error);
@@ -261,7 +260,7 @@ RCT_EXPORT_METHOD(secureSealWithPassphraseDecrypt:(NSString*) passphrase
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:decrypted];
+    NSArray* result = [RCTThemis dataSerialize:decrypted];
     successCallback(@[result]);
   }
   
@@ -272,7 +271,7 @@ RCT_EXPORT_METHOD(secureSealWithPassphraseDecrypt:(NSString*) passphrase
 - (TSCellToken *)newTokenMode:(NSArray*) symmetricKey
 {
   @try {
-      NSData *masterKey = [Themis dataDeserialize: symmetricKey];
+    NSData *masterKey = [RCTThemis dataDeserialize: symmetricKey];
     TSCellToken *cell = [[TSCellToken alloc] initWithKey:masterKey];
     return cell;
   }
@@ -303,8 +302,8 @@ RCT_EXPORT_METHOD(tokenProtectEncrypt:(NSArray*) symmetricKey
   NSData *ctx  = [context dataUsingEncoding:NSUTF8StringEncoding];
   TSCellTokenEncryptedResult *result = [cell encrypt:txt context:ctx];
   
-    NSArray *encrypted = [Themis dataSerialize: result.encrypted];
-    NSArray *token     = [Themis dataSerialize: result.token];
+  NSArray *encrypted = [RCTThemis dataSerialize: result.encrypted];
+  NSArray *token     = [RCTThemis dataSerialize: result.token];
   
   NSDictionary *dictionary = @{
        @"encrypted" : encrypted,
@@ -328,8 +327,8 @@ RCT_EXPORT_METHOD(tokenProtectDecrypt:(NSArray*) symmetricKey
   
   @try {
     cell  = [self newTokenMode:symmetricKey];
-      enc  = [Themis dataDeserialize:encrypted];
-      tkn  = [Themis dataDeserialize:token];
+    enc   = [RCTThemis dataDeserialize:encrypted];
+    tkn   = [RCTThemis dataDeserialize:token];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -347,7 +346,7 @@ RCT_EXPORT_METHOD(tokenProtectDecrypt:(NSArray*) symmetricKey
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:decrypted];
+    NSArray* result = [RCTThemis dataSerialize:decrypted];
     successCallback(@[result]);
   }
   
@@ -359,7 +358,7 @@ RCT_EXPORT_METHOD(tokenProtectDecrypt:(NSArray*) symmetricKey
 - (TSCellContextImprint *)newContextImprint:(NSArray*) symmetricKey
 {
   @try {
-      NSData *masterKey = [Themis dataDeserialize: symmetricKey];
+    NSData *masterKey = [RCTThemis dataDeserialize: symmetricKey];
     TSCellContextImprint *cell = [[TSCellContextImprint alloc] initWithKey:masterKey];
     return cell;
   }
@@ -395,7 +394,7 @@ RCT_EXPORT_METHOD(contextImprintEncrypt:(NSArray*) symmetricKey
   NSData *ctx  = [context dataUsingEncoding:NSUTF8StringEncoding];
   NSData *encrypted = [cell encrypt:txt context:ctx];
   
-    NSArray *result = [Themis dataSerialize:encrypted];
+  NSArray *result = [RCTThemis dataSerialize:encrypted];
 
   successCallback(@[result]);
 }
@@ -417,7 +416,7 @@ RCT_EXPORT_METHOD(contextImprintDecrypt:(NSArray*) symmetricKey
   NSData *enc;
   @try {
     cell = [self newContextImprint:symmetricKey];
-      enc  = [Themis dataDeserialize:encrypted];
+    enc  = [RCTThemis dataDeserialize:encrypted];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -428,7 +427,7 @@ RCT_EXPORT_METHOD(contextImprintDecrypt:(NSArray*) symmetricKey
   NSData *ctx  = [context dataUsingEncoding:NSUTF8StringEncoding];
   NSData *decrypted = [cell decrypt:enc
                             context:ctx];
-    NSArray* result = [Themis dataSerialize:decrypted];
+  NSArray* result = [RCTThemis dataSerialize:decrypted];
   successCallback(@[result]);
 }
 
@@ -450,8 +449,8 @@ RCT_EXPORT_METHOD(secureMessageSign:(NSString*) message
   NSData* pvtKey;
   NSData* pubKey;
   @try {
-      pvtKey = [Themis dataDeserialize:privateKey];
-      pubKey = [Themis dataDeserialize:publicKey];
+    pvtKey = [RCTThemis dataDeserialize:privateKey];
+    pubKey = [RCTThemis dataDeserialize:publicKey];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -470,7 +469,7 @@ RCT_EXPORT_METHOD(secureMessageSign:(NSString*) message
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:signedMessage];
+    NSArray* result = [RCTThemis dataSerialize:signedMessage];
     successCallback(@[result]);
   }
 
@@ -495,9 +494,9 @@ RCT_EXPORT_METHOD(secureMessageVerify:(NSArray*) message
   NSData* msg;
   
   @try {
-      pvtKey = [Themis dataDeserialize:privateKey];
-      pubKey = [Themis dataDeserialize:publicKey];
-      msg =    [Themis dataDeserialize:message];
+      pvtKey = [RCTThemis dataDeserialize:privateKey];
+      pubKey = [RCTThemis dataDeserialize:publicKey];
+      msg =    [RCTThemis dataDeserialize:message];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -514,7 +513,7 @@ RCT_EXPORT_METHOD(secureMessageVerify:(NSArray*) message
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:verifiedMessage];
+    NSArray* result = [RCTThemis dataSerialize:verifiedMessage];
     successCallback(@[result]);
   }
 }
@@ -544,8 +543,8 @@ RCT_EXPORT_METHOD(secureMessageEncrypt:(NSString*) message
   NSData* pubKey;
   
   @try {
-      pvtKey = [Themis dataDeserialize:privateKey];
-      pubKey = [Themis dataDeserialize:publicKey];
+    pvtKey = [RCTThemis dataDeserialize:privateKey];
+    pubKey = [RCTThemis dataDeserialize:publicKey];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -564,7 +563,7 @@ RCT_EXPORT_METHOD(secureMessageEncrypt:(NSString*) message
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:encryptedMessage];
+    NSArray* result = [RCTThemis dataSerialize:encryptedMessage];
     successCallback(@[result]);
   }
   
@@ -595,9 +594,9 @@ RCT_EXPORT_METHOD(secureMessageDecrypt:(NSArray*) message
   NSData* msg;
   
   @try {
-      pvtKey = [Themis dataDeserialize:privateKey];
-      pubKey = [Themis dataDeserialize:publicKey];
-      msg    = [Themis dataDeserialize:message];
+      pvtKey = [RCTThemis dataDeserialize:privateKey];
+      pubKey = [RCTThemis dataDeserialize:publicKey];
+      msg    = [RCTThemis dataDeserialize:message];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -614,7 +613,7 @@ RCT_EXPORT_METHOD(secureMessageDecrypt:(NSArray*) message
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:decryptedMessage];
+    NSArray* result = [RCTThemis dataSerialize:decryptedMessage];
     successCallback(@[result]);
   }
   
@@ -629,7 +628,7 @@ RCT_EXPORT_METHOD(initComparator:(NSArray*) sharedSecret
   NSData* sharedSecretData;
   
   @try {
-      sharedSecretData = [Themis dataDeserialize:sharedSecret];
+    sharedSecretData = [RCTThemis dataDeserialize:sharedSecret];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -674,7 +673,7 @@ RCT_EXPORT_METHOD(beginCompare:(NSString*) uuid
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:data];
+    NSArray* result = [RCTThemis dataSerialize:data];
     successCallback(@[result]);
   }
 }
@@ -694,7 +693,7 @@ RCT_EXPORT_METHOD(proceedCompare:(NSString*) uuid
   NSData* data;
   
   @try {
-      data = [Themis dataDeserialize:previous];
+    data = [RCTThemis dataDeserialize:previous];
   }
   @catch (NSException *e) {
     NSError* error = SCERROR(BYTEOVERFLOW, e.reason);
@@ -707,7 +706,7 @@ RCT_EXPORT_METHOD(proceedCompare:(NSString*) uuid
   if (error) {
     errorCallback(error);
   } else {
-      NSArray* result = [Themis dataSerialize:data];
+    NSArray* result = [RCTThemis dataSerialize:data];
     NSNumber* status = [[NSNumber alloc] initWithInteger:(NSInteger)cmp.status];
     if (cmp.status != TSComparatorNotReady) {
       [cmprs removeObjectForKey:uuid];

@@ -5,8 +5,8 @@
 //  Created by Oleksii Radetskyi on 04.11.2021.
 //
 
-#ifndef Themis_h
-#define Themis_h
+#ifndef RCTThemis_h
+#define RCTThemis_h
 
 #import <React/RCTBridgeModule.h>
 
@@ -23,7 +23,7 @@
 #define KEYTYPE_RSA 1
 
 
-@interface Themis : NSObject <RCTBridgeModule>
+@interface RCTThemis : NSObject <RCTBridgeModule>
 @end
 
-#endif /* Themis_h */
+#endif /* RCTThemis_h */
