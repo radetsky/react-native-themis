@@ -30,14 +30,21 @@ import { Buffer } from 'buffer';
 
 import { NativeModules } from 'react-native'
 
+import {
+  keyPair64,
+  symmetricKey64,
+  secureSealWithSymmetricKeyEncrypt64,
+  secureSealWithSymmetricKeyDecrypt64,
+  KEYTYPE_EC,
+  KEYTYPE_RSA
+} from 'react-native-themis'
+
 const themis = NativeModules.Themis
 const {
   COMPARATOR_NOT_READY,
   COMPARATOR_NOT_MATCH,
   COMPARATOR_MATCH,
-  COMPARATOR_ERROR,
-  KEYTYPE_RSA,
-  KEYTYPE_EC } = themis.getConstants()
+  COMPARATOR_ERROR } = themis.getConstants()
 
 const Section = ({ children, title }): Node => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -89,18 +96,51 @@ const App: () => Node = () => {
 
   useEffect(() => {
 
+    // Just converting incoming base64 string to UTF-8 encoded string 
     const cat = "0JrQvtGI0LrQsCDRjdGC0LAg0LHRi9C70LAg0LDQsdGB0L7Qu9GO0YLQvdC+INGH0LXRgNC90LDRjywg0LPQu9Cw0LTQutCw0Y8sINC60LDQuiDQv9Cw0L3RgtC10YDQsCwg0LrRgNCw0YHQuNCy0LDRjyDQuCwg0L/Qvi3QstC40LTQuNC80L7QvNGDLCDRhdC+0YDQvtGI0LjRhSDQutGA0L7QstC10LkuINCd0L4g0LXQuSDQvdC1INC/0L7QstC10LfQu9C+INCyINC20LjQt9C90LggKNGB0LrQvtGA0LXQtSDQstGB0LXQs9C+LCDQutGC0L4t0YLQviDQstGL0LPQvdCw0Lsg0LjQtyDQtNC+0LzRgykg0Lgg0L7QvdCwINGB0LDQvNCwINC/0YDQvtC80YvRiNC70Y/Qu9CwINC/0YDQvtC/0LjRgtCw0L3QuNC1Lg0K0JvQtdGC0L7QvCDQvdCwINCx0LvQuNC20LDQudGI0LjRhSDQtNCw0YfQvdGL0YUg0YPRh9Cw0YHRgtC60LDRhSwg0LAg0LfQuNC80L7QuSDQvdCwINC+0LrRgNC10YHRgtC90YvRhSDQv9C+0LzQvtC50LrQsNGFINCyINC/0L7RgdC10LvQutC1LiDQm9GO0LTQtdC5INC90LUg0LHQvtGP0LvQsNGB0YwsINC90L4g0Lgg0L3QtSDQt9Cw0LjRgdC60LjQstCw0LvQsCwg0Lgg0LIg0YDRg9C60Lgg0L3QtSDQtNCw0LLQsNC70LDRgdGMLiDQl9CwINC/0L7QvNC+0LnQutC4INGB0LLQuNGA0LXQv9C+INC00YDQsNC70LDRgdGMINCyINC+0LrRgNC10YHRgtC90YvQvNC4INC60L7RgtCw0LzQuCwg0LrQvtGC0L7RgNGL0LUg0LXQtSDRgdC40LvRjNC90L4g0YPQstCw0LbQsNC70LguINCt0LTQsNC60LDRjyDRhdCy0L7RgdGC0LDRgtCw0Y8gwqvQu9C10LTQuC3QvNCw0YTQuNGPwrsg0LIg0YfQtdGA0L3QvtC8LCDRgSDRgNC10LLQvtC70YzQstC10YDQvtC8INC30LAg0L/QvtGP0YHQvtC8LCDQutC+0YLQvtGA0LDRjyDQtNGA0LDQuiDQvdC1INC30LDRgtC10LLQsNC10YIsINC90L4g0LIg0YHQu9GD0YfQsNC1INGH0LXQs9C+INC/0YDQuNGB0YLRgNC10LvQuNGCLCDQvdC1INC80L7RgNCz0L3Rg9CyINCz0LvQsNC30L7QvC4=";
     const buf = Buffer.from(cat, 'base64').toString("utf-8");
     console.log("==> Cat <==:", buf);
+    // End of converting example 
 
-    themis.keyPair(KEYTYPE_RSA, (keyPair) => {
-      setPrivateKey(Buffer.from(new Uint8Array(keyPair.private)).toString("base64"))
-      setPublicKey(Buffer.from(new Uint8Array(keyPair.public)).toString("base64"))
-      console.log(Buffer.from(new Uint8Array(keyPair.private)).toString("base64"))
-      console.log(Buffer.from(new Uint8Array(keyPair.public)).toString("base64"))
-    })
+    // Async Themis keyPair64 example. It resolves with asymmetric keypair anyway. 
+    // Always return base64 encoded strings 
+    keyPair64(KEYTYPE_EC)
+      .then((pair: any) => {
+        console.log("pair private", pair.private64)
+        console.log("pair public", pair.public64)
+        setPrivateKey(pair.private64)
+        setPublicKey(pair.public64)
+      })
+
+    symmetricKey64()
+      .then((key64) => {
+        console.log("!!! symmetric key: ", key64)
+        secureSealWithSymmetricKeyEncrypt64(key64, plaintext, context)
+          .then((encrypted64) => {
+            console.log("encrypted64:", encrypted64)
+            secureSealWithSymmetricKeyDecrypt64(key64, encrypted64, context)
+              .then((decrypted) => {
+                console.log("Decrypted with promise:", decrypted)
+              })
+              .catch((error: any) => {
+                console.log(error)
+              })
+          })
+          .catch((error) => {
+            console.log("encrypted64 error:", error)
+          })
+      });
+
+    (async () => {
+      const key64 = await symmetricKey64()
+      const encrypted64 = await secureSealWithSymmetricKeyEncrypt64(key64, plaintext, context)
+      const decrypted = await secureSealWithSymmetricKeyDecrypt64(key64, encrypted64, context)
+
+      console.log("[!!!] Asynced decrypted:", decrypted)
+    })();
 
     themis.symmetricKey((symmetricKey) => {
+      console.log(symmetricKey)
       setMasterKey(symmetricKey)
       console.log("Symmetric key: ", Buffer.from(new Uint8Array(symmetricKey)).toString("base64"))
       console.log(`Encrypting "${plaintext}" with context "${context}" and random generated symmetric key`)
