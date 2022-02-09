@@ -87,16 +87,14 @@ export function secureSealWithPassphraseEncrypt64(
   plaintext: String,
   context: String): Promise<string> {
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     Themis.secureSealWithPassphraseEncrypt(passphrase, plaintext, context, (encrypted: any) => {
       resolve(Buffer.from(new Uint8Array(encrypted)).toString("base64"))
-    }, (error: any) => {
-      reject(error)
-    })
+    });
   });
 };
 
-export function secureSealWirhPassphraseDecrypt64(
+export function secureSealWithPassphraseDecrypt64(
   passphrase: String,
   encrypted64: String,
   context: String): Promise<string> {
@@ -257,6 +255,50 @@ export function secureMessageDecrypt64(
       reject(error)
     })
   })
-
 }
 
+export function string64(input: String): String {
+  return Buffer.from(input).toString('base64')
+}
+
+/* Returns UUID in string value that corresponds to new comparator */
+export function comparatorInit64(data64: String): Promise<string> {
+  const data = Array.from(Buffer.from(data64, 'base64'))
+  return new Promise((resolve, reject) => {
+    Themis.initComparator(data, (comparator: string) => {
+      resolve(comparator)
+    }, (error: any) => {
+      reject(error)
+    })
+  })
+}
+
+export function comparatorBegin(uuidStr: String): Promise<string> {
+  return new Promise((resolve, reject) => {
+    Themis.beginCompare(uuidStr, (data: any) => {
+      resolve(Buffer.from(new Uint8Array(data)).toString("base64"))
+    }, (error: any) => {
+      reject(error)
+    })
+  })
+}
+
+/* Returns next part of data and current status */
+export function comparatorProceed64(
+  uuidStr: String,
+  data64: String): Promise<Object> {
+
+  const data = Array.from(Buffer.from(data64, 'base64'))
+  return new Promise((resolve, reject) => {
+    Themis.proceedCompare(uuidStr, data, (nextData: any, status: Number) => {
+      const nextdata64 = Buffer.from(new Uint8Array(nextData)).toString("base64")
+      resolve({
+        data64: nextdata64,
+        status: status
+      })
+    }, (error: any) => {
+      reject(error)
+    })
+  })
+
+}

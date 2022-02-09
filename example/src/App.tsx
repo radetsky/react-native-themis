@@ -32,7 +32,7 @@ import {
   secureSealWithSymmetricKeyEncrypt64,
   secureSealWithSymmetricKeyDecrypt64,
   secureSealWithPassphraseEncrypt64,
-  secureSealWirhPassphraseDecrypt64,
+  secureSealWithPassphraseDecrypt64,
   tokenProtectEncrypt64,
   tokenProtectDecrypt64,
   contextImprintEncrypt64,
@@ -41,6 +41,10 @@ import {
   secureMessageVerify64,
   secureMessageEncrypt64,
   secureMessageDecrypt64,
+  string64,
+  comparatorInit64,
+  comparatorBegin,
+  comparatorProceed64,
   KEYTYPE_EC,
   KEYTYPE_RSA
 } from 'react-native-themis'
@@ -151,7 +155,7 @@ const App: () => Node = () => {
     secureSealWithPassphraseEncrypt64(passphrase, plaintext, context)
       .then((encrypted64) => {
         setEncryptedWithPassphrase(encrypted64)
-        secureSealWirhPassphraseDecrypt64(passphrase, encrypted64, context)
+        secureSealWithPassphraseDecrypt64(passphrase, encrypted64, context)
           .then((decrypted) => {
             console.log("Decrypted with the passphrase:", decrypted)
           })
@@ -233,115 +237,78 @@ const App: () => Node = () => {
       console.log("Decrypted secure message:", decrypted)
     })();
 
-    const proceedCompare = (data, server, client) => {
-      // receive data from server 
-      themis.proceedCompare(server, data, (nextData, serverStatus) => {
-        console.log("=== Server proceeded with status:", serverStatus)
-        themis.proceedCompare(client, nextData, (nextNextData, clientStatus) => {
-          console.log("=== Client proceeded with status:", clientStatus)
-          if (clientStatus == COMPARATOR_NOT_READY ||
-            serverStatus == COMPARATOR_NOT_READY) {
-            proceedCompare(nextNextData, server, client) // Continue process of compare
-          } else {
-            if (clientStatus == COMPARATOR_MATCH) {
-              console.log("=== SecureComparator secrets match")
-            } else {
-              console.log("=== SecureComparator secrets NOT match")
-            }
-          }
-        }, (error) => {
-          console.error(error)
-        })
-      }, (error) => {
-        console.error(error)
-      })
+    const lorem = lorem2 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquam dictum tellus, eget malesuada lectus scelerisque non. Curabitur at nibh vestibulum, sagittis felis non, convallis magna. Vestibulum fringilla a urna quis facilisis. Etiam rhoncus hendrerit diam, at elementum nisi condimentum dignissim. Nam eleifend libero accumsan pharetra cursus. Phasellus eget nulla pellentesque, elementum dui eu, malesuada mi. Quisque dolor augue, mattis ut mauris id, sollicitudin fermentum elit. Suspendisse nulla velit, tincidunt a viverra interdum, cursus vitae nunc. Proin turpis ante, consectetur nec nisl consequat, rhoncus congue risus. Sed mattis tempus mi quis hendrerit. Nullam sit amet arcu dapibus, dignissim risus nec, tempus metus. Morbi condimentum sagittis metus eu eleifend. Duis scelerisque eu tellus non porta. Duis viverra tincidunt congue.";
+    const lorem64 = lorem642 = string64(lorem);
+
+    async function proceedCompare(data64: String, serverID: String, clientID: String): Promise<Number> {
+      const serverResult = await comparatorProceed64(serverID, data64)
+      console.log("Server proceeded with status:", serverResult.status)
+      const clientResult = await comparatorProceed64(clientID, serverResult.data64)
+      console.log("Client proceeded with status:", clientResult.status)
+      if (clientResult.status == COMPARATOR_NOT_READY ||
+        serverResult.status == COMPARATOR_NOT_READY) {
+        return Promise.resolve(proceedCompare(clientResult.data64, serverID, clientID))
+      } else {
+        if (clientResult.status == COMPARATOR_MATCH) {
+          return Promise.resolve(COMPARATOR_MATCH)
+        } else {
+          return Promise.resolve(COMPARATOR_NOT_MATCH)
+        }
+      }
     }
 
-    const lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquam dictum tellus, eget malesuada lectus scelerisque non. Curabitur at nibh vestibulum, sagittis felis non, convallis magna. Vestibulum fringilla a urna quis facilisis. Etiam rhoncus hendrerit diam, at elementum nisi condimentum dignissim. Nam eleifend libero accumsan pharetra cursus. Phasellus eget nulla pellentesque, elementum dui eu, malesuada mi. Quisque dolor augue, mattis ut mauris id, sollicitudin fermentum elit. Suspendisse nulla velit, tincidunt a viverra interdum, cursus vitae nunc. Proin turpis ante, consectetur nec nisl consequat, rhoncus congue risus. Sed mattis tempus mi quis hendrerit. Nullam sit amet arcu dapibus, dignissim risus nec, tempus metus. Morbi condimentum sagittis metus eu eleifend. Duis scelerisque eu tellus non porta. Duis viverra tincidunt congue."
-    themis.stringSerialize(lorem, (symmetricKey) => {
-      themis.stringSerialize(plaintext, (plainKey) => {
-        // console.log("=== Symkey for comparator:", Buffer.from(new Uint8Array(symmetricKey)).toString('base64'))
-        themis.initComparator(symmetricKey, (server) => {
-          console.log("=== Server:", server)
-          themis.statusOfComparator(server, (status) => {
-            console.log("=== Example status:", status)
-          })
-          themis.initComparator(plainKey, (client) => {
-            console.log("=== Client:", client)
-            themis.beginCompare(client, (data) => {
-              proceedCompare(data, server, client)
-            }, (error) => {
-              console.error(error)
-            })
-          }, (clientError) => {
-            console.error(clientError) // client comparator error 
-          })
-        }, (serverError) => {
-          console.error(serverError) // server comparator error 
-        })
-      })
-    })
+    (async () => {
+      const server = await comparatorInit64(lorem64);
+      const client = await comparatorInit64(lorem642);
+      const data = await comparatorBegin(client);
+      const result = await proceedCompare(data, server, client)
+      console.log("Comparator done with status:", result)
+    })();
 
-    // Test from Java
-    const buffj = Buffer.from('AAEBQQwAAAAQAAAAEwAAABYAAAADLKbW7aho9FeDMqy0iRukfGpZAGnEcYqpfAX2QA0DABAAk2Vk0xoTQzLLUoujO2L39JcNyl6AMSHF3o/V9itzchX/7PA=', 'base64');
-    const testj = buffj.toJSON().data;
-    themis.secureSealWithPassphraseDecrypt('a password', testj, 'Java context', (decrypted) => {
-      console.log("Decrypted with passphrase from Java:", Buffer.from(new Uint8Array(decrypted)).toString())
-    }, (error) => {
-      console.log(error)
-    })
+    // New Test from Java 
+    const javaTest64 = 'AAEBQQwAAAAQAAAAEwAAABYAAAADLKbW7aho9FeDMqy0iRukfGpZAGnEcYqpfAX2QA0DABAAk2Vk0xoTQzLLUoujO2L39JcNyl6AMSHF3o/V9itzchX/7PA=';
+    secureSealWithPassphraseDecrypt64('a password', javaTest64, 'Java context')
+      .then((decrypted) => {
+        console.log("Decrypted64 with passphrase from Java:", decrypted)
+      })
 
     // Test with symmetric keys from Java
-    const javaSymKey = Buffer.from('Z7BY52XyuM0ss1Ma/O+4Fy9mal5lvMDRyK2nZpuA4U0=', 'base64');
-    const javaSymKeyData = javaSymKey.toJSON().data;
-    const javaEnc = Buffer.from('AAEBQAwAAAAQAAAAEwAAAFQFGDh5JAJFNzoXDi3SGSWqNfccYlWc/RiBf3QL8YtaT3gRlj8whlx2umdrsFE1', 'base64');
-    const javaEncData = javaEnc.toJSON().data;
-    themis.secureSealWithSymmetricKeyDecrypt(javaSymKeyData, javaEncData, 'Java context', (decrypted) => {
-      console.log("Decrypted with symmetric key from Java:", Buffer.from(new Uint8Array(decrypted)).toString())
-    }, (error) => {
-      console.log("Decrypt with symmetric key from Java:", error);
-    })
+    const javaSymKey = 'Z7BY52XyuM0ss1Ma/O+4Fy9mal5lvMDRyK2nZpuA4U0=';
+    const javaEnc = 'AAEBQAwAAAAQAAAAEwAAAFQFGDh5JAJFNzoXDi3SGSWqNfccYlWc/RiBf3QL8YtaT3gRlj8whlx2umdrsFE1';
+    secureSealWithSymmetricKeyDecrypt64(javaSymKey, javaEnc, 'Java context')
+      .then((decrypted) => {
+        console.log("Decrypted64 with symmetric key from Java:", decrypted)
+      })
 
     // Test from Python
-    const buffp = Buffer.from('AAEBQQwAAAAQAAAAEAAAABYAAACqaCdlWERyzPeFEWJbPP+fqksXKvYAUVWSb4caQA0DABAApYwgn2Kt+WKXtP3X3lL0lJ5gA4+b+vo7VWiJjmtf4d8=', 'base64');
-    const testp = buffp.toJSON().data;
-    themis.secureSealWithPassphraseDecrypt('a password', testp, 'Python context', (decrypted) => {
-      console.log("Decrypted with passphrase from Python:", Buffer.from(new Uint8Array(decrypted)).toString())
-    }, (error) => {
-      console.log(error)
-    })
+    const buffp = 'AAEBQQwAAAAQAAAAEAAAABYAAACqaCdlWERyzPeFEWJbPP+fqksXKvYAUVWSb4caQA0DABAApYwgn2Kt+WKXtP3X3lL0lJ5gA4+b+vo7VWiJjmtf4d8=';
+    secureSealWithPassphraseDecrypt64('a password', buffp, 'Python context')
+      .then((decrypted) => {
+        console.log("Decrypted64 with passphrase from Python:", decrypted);
+      })
 
     // Test with symmetric keys from Python
-    const pySymKey = Buffer.from('pGFN54NKRpF53bpf5YtO5PmDVT9N/Ep9Hm0N0w8UXnU=', 'base64');
-    const pySymKeyData = pySymKey.toJSON().data;
-    const pyEnc = Buffer.from('AAEBQAwAAAAQAAAAEAAAAEIBP7ow0hZg7j1mv0P+S9mYC+H0AJ172CiBOTj1Sqlxzz9wboZCtTnnNwi9', 'base64');
-    const pyEncData = pyEnc.toJSON().data;
-    themis.secureSealWithSymmetricKeyDecrypt(pySymKeyData, pyEncData, 'Python context', (decrypted) => {
-      console.log("Decrypted with symmetric key from Python:", Buffer.from(new Uint8Array(decrypted)).toString())
-    }, (error) => {
-      console.log("Decrypt with symmetric key from Python:", error);
-    })
+    const pySymKey = 'pGFN54NKRpF53bpf5YtO5PmDVT9N/Ep9Hm0N0w8UXnU=';
+    const pyEnc = 'AAEBQAwAAAAQAAAAEAAAAEIBP7ow0hZg7j1mv0P+S9mYC+H0AJ172CiBOTj1Sqlxzz9wboZCtTnnNwi9';
+    secureSealWithSymmetricKeyDecrypt64(pySymKey, pyEnc, 'Python context')
+      .then((decrypted) => {
+        console.log("Decrypted64 with symmetric key from Python:", decrypted)
+      })
 
     // Test from Obj-C
-    const buff = Buffer.from('AAEBQQwAAAAQAAAAFAAAABYAAAASUGtcrR36rVjhVPkbJRNFOXfP5DrmL0g41K3kQA0DABAAwDRJ9q4LtOtf2D2jRkZcIgy8rQU61NHu69wFdvKAfNPL1OdU', 'base64');
-    const test = buff.toJSON().data;
-    themis.secureSealWithPassphraseDecrypt('test', test, 'test', (decrypted) => {
-      console.log("Decrypted with passphrase from ObjC:", Buffer.from(new Uint8Array(decrypted)).toString())
-    }, (error) => {
-      console.log(error)
-    })
+    const buff = 'AAEBQQwAAAAQAAAAFAAAABYAAAASUGtcrR36rVjhVPkbJRNFOXfP5DrmL0g41K3kQA0DABAAwDRJ9q4LtOtf2D2jRkZcIgy8rQU61NHu69wFdvKAfNPL1OdU';
+    secureSealWithPassphraseDecrypt64('test', buff, 'test')
+      .then((decrypted) => {
+        console.log("Decrypted64 with passphrase from ObjC:", decrypted);
+      })
 
     // Test with symmetric keys from Obj-C 
-    const objcSymKey = Buffer.from('B+L00zvIOBh/qSTI0hAE2S2unSHhS+0EHspVCToi3oA=', 'base64');
-    const objcSymKeyData = objcSymKey.toJSON().data;
-    const objcEnc = Buffer.from('AAEBQAwAAAAQAAAAEAAAACd7hM2MWqiWu5SDNtzvgjcvN3PBY+VBg9kJQB8R1cwcXfOy8sY75+3pRCe0', 'base64');
-    const objcEncData = objcEnc.toJSON().data;
-    console.log(objcEncData);
-    themis.secureSealWithSymmetricKeyDecrypt(objcSymKeyData, objcEncData, 'test', (decrypted) => {
-      console.log("Decrypted with symmetric key from ObjC:", Buffer.from(new Uint8Array(decrypted)).toString())
-    }, (error) => {
-      console.log("Decrypt with symmetric key from ObjC:", error);
-    })
+    const objcSymKey = 'B+L00zvIOBh/qSTI0hAE2S2unSHhS+0EHspVCToi3oA=';
+    const objcEnc = 'AAEBQAwAAAAQAAAAEAAAACd7hM2MWqiWu5SDNtzvgjcvN3PBY+VBg9kJQB8R1cwcXfOy8sY75+3pRCe0';
+    secureSealWithSymmetricKeyDecrypt64(objcSymKey, objcEnc, 'test')
+      .then((decrypted) => {
+        console.log("Decrypted64 with symmetric key from ObjC:", decrypted)
+      })
 
 
   }, [])
