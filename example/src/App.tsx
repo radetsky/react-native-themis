@@ -20,10 +20,6 @@ import {
 
 import {
   Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
 
 import { Buffer } from 'buffer';
@@ -35,6 +31,16 @@ import {
   symmetricKey64,
   secureSealWithSymmetricKeyEncrypt64,
   secureSealWithSymmetricKeyDecrypt64,
+  secureSealWithPassphraseEncrypt64,
+  secureSealWirhPassphraseDecrypt64,
+  tokenProtectEncrypt64,
+  tokenProtectDecrypt64,
+  contextImprintEncrypt64,
+  contextImprintDecrypt64,
+  secureMessageSign64,
+  secureMessageVerify64,
+  secureMessageEncrypt64,
+  secureMessageDecrypt64,
   KEYTYPE_EC,
   KEYTYPE_RSA
 } from 'react-native-themis'
@@ -112,115 +118,120 @@ const App: () => Node = () => {
         setPublicKey(pair.public64)
       })
 
+    // Symmetric key => promise => encryption => promise => decryption 
     symmetricKey64()
       .then((key64) => {
-        console.log("!!! symmetric key: ", key64)
         secureSealWithSymmetricKeyEncrypt64(key64, plaintext, context)
           .then((encrypted64) => {
-            console.log("encrypted64:", encrypted64)
             secureSealWithSymmetricKeyDecrypt64(key64, encrypted64, context)
               .then((decrypted) => {
-                console.log("Decrypted with promise:", decrypted)
+                console.log("Decrypted with the key:", decrypted)
               })
               .catch((error: any) => {
                 console.log(error)
               })
           })
-          .catch((error) => {
-            console.log("encrypted64 error:", error)
+          .catch((error: any) => {
+            console.log(error)
+          })
+      });
+
+    // the same, but with await
+    (async () => {
+      const key64 = await symmetricKey64()
+      setMasterKey(key64)
+      const encrypted64 = await secureSealWithSymmetricKeyEncrypt64(key64, plaintext, context)
+      setEncryptedWithKey(encrypted64)
+      const decrypted = await secureSealWithSymmetricKeyDecrypt64(key64, encrypted64, context)
+      console.log("Async decrypted:", decrypted)
+    })();
+
+
+    // secure seal with passphrase encrypt and decrypt 
+    secureSealWithPassphraseEncrypt64(passphrase, plaintext, context)
+      .then((encrypted64) => {
+        setEncryptedWithPassphrase(encrypted64)
+        secureSealWirhPassphraseDecrypt64(passphrase, encrypted64, context)
+          .then((decrypted) => {
+            console.log("Decrypted with the passphrase:", decrypted)
+          })
+          .catch((error: any) => {
+            console.log(error)
+          })
+      })
+      .catch((error: any) => {
+        console.log(error)
+      })
+
+    // token protect 
+    symmetricKey64()
+      .then((key64) => {
+        tokenProtectEncrypt64(key64, plaintext, context)
+          .then((encrypted: any) => {
+            setEncryptedWithTokenProtect(encrypted.encrypted64)
+            setTokenProtect(encrypted.token64)
+            tokenProtectDecrypt64(key64, encrypted.encrypted64, encrypted.token64, context)
+              .then((decrypted) => {
+                console.log("Decrypted with token protect:", decrypted)
+              })
+              .catch((error: any) => {
+                console.log(error)
+              })
+          })
+          .catch((error: any) => {
+            console.log(error)
+          })
+      })
+
+    // context imprint 
+
+    symmetricKey64()
+      .then((key64) => {
+        contextImprintEncrypt64(key64, plaintext, context)
+          .then((encrypted64: any) => {
+            setEncryptedWithContextImprint(encrypted64)
+            contextImprintDecrypt64(key64, encrypted64, context)
+              .then((decrypted) => {
+                console.log("Decrypted with context imprint:", decrypted)
+              })
+              .catch((error: any) => {
+                console.log(error)
+              })
+          })
+          .catch((error: any) => {
+            console.log(error)
+          })
+      })
+
+
+    keyPair64(KEYTYPE_EC)
+      .then((pair: any) => {
+        console.log("pair private", pair.private64)
+        console.log("pair public", pair.public64)
+        secureMessageSign64(plaintext, pair.private64, "")
+          .then((signed64: any) => {
+            setSignedSecureMessage(signed64)
+            secureMessageVerify64(signed64, "", pair.public64)
+              .then((verified) => {
+                console.log("Secure Message verified text:", verified);
+              })
+              .catch((error: any) => {
+                console.log(error)
+              })
+          })
+          .catch((error: any) => {
+            console.log(error)
           })
       });
 
     (async () => {
-      const key64 = await symmetricKey64()
-      const encrypted64 = await secureSealWithSymmetricKeyEncrypt64(key64, plaintext, context)
-      const decrypted = await secureSealWithSymmetricKeyDecrypt64(key64, encrypted64, context)
-
-      console.log("[!!!] Asynced decrypted:", decrypted)
+      const aliceKeyPair = await keyPair64(KEYTYPE_RSA);
+      const bobKeyPair = await keyPair64(KEYTYPE_RSA);
+      const encrypted64 = await secureMessageEncrypt64(plaintext, aliceKeyPair.private64, bobKeyPair.public64);
+      setEncryptedSecureMessage(encrypted64);
+      const decrypted = await secureMessageDecrypt64(encrypted64, bobKeyPair.private64, aliceKeyPair.public64);
+      console.log("Decrypted secure message:", decrypted)
     })();
-
-    themis.symmetricKey((symmetricKey) => {
-      console.log(symmetricKey)
-      setMasterKey(symmetricKey)
-      console.log("Symmetric key: ", Buffer.from(new Uint8Array(symmetricKey)).toString("base64"))
-      console.log(`Encrypting "${plaintext}" with context "${context}" and random generated symmetric key`)
-      themis.secureSealWithSymmetricKeyEncrypt(symmetricKey, plaintext, context, (encrypted) => {
-        setEncryptedWithKey(encrypted)
-        console.log("Encrypted with symmetric key:", Buffer.from(new Uint8Array(encrypted)).toString("base64"))
-        themis.secureSealWithSymmetricKeyDecrypt(symmetricKey, encrypted, context, (decrypted) => {
-          console.log("Decrypted with symmetric key:", Buffer.from(new Uint8Array(decrypted)).toString())
-        }, (error) => {
-          console.error(error) // decrypt error
-        })
-      }, (error) => {
-        console.error(error) // encrypt error
-      })
-    })
-
-    themis.secureSealWithPassphraseEncrypt(passphrase, plaintext, context, (encrypted) => {
-      setEncryptedWithPassphrase(encrypted)
-      console.log("Encrypted with passphrase:", Buffer.from(new Uint8Array(encrypted)).toString("base64"))
-      themis.secureSealWithPassphraseDecrypt(passphrase, encrypted, context, (decrypted) => {
-        console.log("Decrypted with passphrase:", Buffer.from(new Uint8Array(decrypted)).toString())
-      }, (error) => {
-        console.error(error)
-      })
-    })
-
-    themis.symmetricKey((symmetricKey) => {
-      themis.tokenProtectEncrypt(symmetricKey, plaintext, context, (result) => {
-        console.log("Encrypted with token protect: ", result)
-        setEncryptedWithTokenProtect(result.encrypted)
-        setTokenProtect(result.token)
-        themis.tokenProtectDecrypt(symmetricKey, result.encrypted, result.token, context, (decrypted) => {
-          console.log("Decrypted with token protect:", Buffer.from(new Uint8Array(decrypted)).toString())
-        }, (error) => {
-          console.error(error) // decrypt error 
-        })
-      }, (error) => {
-        console.error(error) // encrypt error 
-      })
-    })
-
-    themis.symmetricKey((symmetricKey) => {
-      themis.contextImprintEncrypt(symmetricKey, plaintext, " ", (encrypted) => {
-        setEncryptedWithContextImprint(encrypted)
-        console.log("Encrypted with context imprint:", Buffer.from(new Uint8Array(encrypted)).toString("base64"))
-        themis.contextImprintDecrypt(symmetricKey, encrypted, " ", (decrypted) => {
-          console.log("Decrypted with context imprint:", Buffer.from(new Uint8Array(decrypted)).toString())
-        }, (error) => {
-          console.error(error) // decrypt error 
-        })
-      }, (error) => {
-        console.error(error) // encrypt error
-      })
-    })
-
-    themis.keyPair(KEYTYPE_EC, (keyPair) => {
-      themis.secureMessageSign(plaintext, keyPair.private, null, (signed) => {
-        console.log("Signed secure message:", Buffer.from(new Uint8Array(signed)).toString("base64"))
-        setSignedSecureMessage(signed)
-        themis.secureMessageVerify(signed, null, keyPair.public, (verified) => {
-          console.log("Verified secure message:", Buffer.from(new Uint8Array(verified)).toString())
-        }, (error) => {
-          console.error(error)
-        })
-      }, (error) => {
-        console.error(error)
-      })
-    })
-
-    themis.keyPair(KEYTYPE_RSA, (aliceKeyPair) => {
-      themis.keyPair(KEYTYPE_RSA, (bobKeyPair) => {
-        themis.secureMessageEncrypt(plaintext, aliceKeyPair.private, bobKeyPair.public, (encrypted) => {
-          console.log("Encrypted secure message:", Buffer.from(new Uint8Array(encrypted)).toString("base64"))
-          setEncryptedSecureMessage(encrypted)
-          themis.secureMessageDecrypt(encrypted, bobKeyPair.private, aliceKeyPair.public, (decrypted) => {
-            console.log("Decrypted secure message:", Buffer.from(new Uint8Array(decrypted)).toString())
-          }, (error) => { console.error(error) })
-        }, (error) => { console.error(error) })
-      })
-    })
 
     const proceedCompare = (data, server, client) => {
       // receive data from server 
@@ -359,47 +370,47 @@ const App: () => Node = () => {
             <View>
               <Text>Symmetric key:</Text>
               <Text numberOfLines={3} style={styles.blob}>
-                {Buffer.from(new Uint8Array(masterKey)).toString("base64")}
+                {masterKey}
               </Text>
             </View>
           </Section>
           <Section title="Encrypted with the key">
             <Text numberOfLines={3} style={styles.blob}>
-              {Buffer.from(new Uint8Array(encryptedWithKey)).toString("base64")}
+              {encryptedWithKey}
             </Text>
           </Section>
           <Section title="Encrypted with the passphrase">
             <Text numberOfLines={3} style={styles.blob}>
-              {Buffer.from(new Uint8Array(encryptedWithPassphrase)).toString("base64")}
+              {encryptedWithPassphrase}
             </Text>
           </Section>
           <Section title="Encrypted with token protect">
             <View>
               <Text>Encrypted with the same length:</Text>
               <Text numberOfLines={3} style={styles.blob}>
-                {Buffer.from(new Uint8Array(encryptedWithTokenProtect)).toString("base64")}
+                {encryptedWithTokenProtect}
               </Text>
             </View>
             <View style={{ paddingTop: 10 }}>
               <Text>Token</Text>
               <Text numberOfLines={3} style={styles.blob}>
-                {Buffer.from(new Uint8Array(tokenProtect)).toString("base64")}
+                {tokenProtect}
               </Text>
             </View>
           </Section>
           <Section title="Encrypted with context imprint">
             <Text numberOfLines={3} style={styles.blob}>
-              {Buffer.from(new Uint8Array(encryptedWithContextImprint)).toString("base64")}
+              {encryptedWithContextImprint}
             </Text>
           </Section>
           <Section title="Signed secure message">
             <Text numberOfLines={3} style={styles.blob}>
-              {Buffer.from(new Uint8Array(signedSecureMessage)).toString("base64")}
+              {signedSecureMessage}
             </Text>
           </Section>
           <Section title="Encrypted secure message">
             <Text numberOfLines={3} style={styles.blob}>
-              {Buffer.from(new Uint8Array(encryptedSecureMessage)).toString("base64")}
+              {encryptedSecureMessage}
             </Text>
           </Section>
         </View>
