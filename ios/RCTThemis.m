@@ -37,6 +37,11 @@ NSMutableDictionary* cmprs;
  };
 }
 
+// It required by constantsToExport and iOS 
++ (BOOL)requiresMainQueueSetup
+{
+    return YES;
+}
 
 /***********************************************/
 /* Used to export NSData* to React Native app  */
