@@ -24,8 +24,6 @@ import {
 
 import { Buffer } from 'buffer';
 
-import { NativeModules } from 'react-native'
-
 import {
   keyPair64,
   symmetricKey64,
@@ -46,15 +44,13 @@ import {
   comparatorBegin,
   comparatorProceed64,
   KEYTYPE_EC,
-  KEYTYPE_RSA
-} from 'react-native-themis'
-
-const themis = NativeModules.Themis
-const {
+  KEYTYPE_RSA,
   COMPARATOR_NOT_READY,
   COMPARATOR_NOT_MATCH,
   COMPARATOR_MATCH,
-  COMPARATOR_ERROR } = themis.getConstants()
+  COMPARATOR_ERROR
+} from 'react-native-themis'
+
 
 const Section = ({ children, title }): Node => {
   const isDarkMode = useColorScheme() === 'dark';
